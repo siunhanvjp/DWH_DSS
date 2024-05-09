@@ -1,7 +1,9 @@
 import folium
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
-from utils.constant import LABEL_COLOR, popup_html_item
+from utils.constant import LABEL_COLOR, popup_html_item, popup_center_item
+from pyproj import Geod
+import numpy as np
 
 def find_centroids(cls_df, n_clusters=3):
     scaler = MinMaxScaler()
@@ -14,6 +16,13 @@ def find_centroids(cls_df, n_clusters=3):
     centroids = kmeans.cluster_centers_.reshape(-1, 2)
     
     return scaler, centroids, labels
+
+def calculate_distance(pt1, pt2):
+    
+    g = Geod(ellps='WGS84')
+    # 2D distance in meters with longitude, latitude of the points
+    azimuth1, azimuth2, distance_2d = g.inv(pt1[1], pt1[0], pt2[1], pt2[0])
+    return round((distance_2d / 1000.0), 2)
 
 def normalize_sizes(sizes):
     min_size = min(sizes)
@@ -51,11 +60,15 @@ def generate_map(df_stateonly, weight_attr, n_clusters=3):
     # Create a Folium Map centered at an initial location
     m = folium.Map(location=[latitude.mean(), longitude.mean()], zoom_start=4)
     cluster_centers = scaler.inverse_transform(centroids)
+    
+    for idx, center in enumerate(cluster_centers):
+        folium.Marker(location=center, icon=folium.Icon(color=LABEL_COLOR[idx], icon='home'), popup=popup_center_item(center[0], center[1], idx)).add_to(m)
 
     # Plot points on the map with different colors based on labels
     for lat, lon, size, label, state_province_name, product_count, average_order_sale, total_sale, order_count, total_discount in zip(latitude, longitude, sizes, labels, state_province_name, product_count, average_order_sale, total_sale, order_count, total_discount):
         radius = (size * zooming) + 1.0
-        popup_text = popup_html_item(lat, lon, labels, state_province_name, product_count, average_order_sale, total_sale, order_count, total_discount)
+        distance = calculate_distance(cluster_centers[label], [lat, lon])
+        popup_text = popup_html_item(lat, lon, labels, state_province_name, product_count, average_order_sale, total_sale, order_count, total_discount, distance)
         
         
         folium.CircleMarker(location=[lat, lon],
@@ -71,7 +84,5 @@ def generate_map(df_stateonly, weight_attr, n_clusters=3):
         # ).add_to(m)
 
     # Plot cluster centers as markers
-    for idx, center in enumerate(cluster_centers):
-        folium.Marker(location=center, icon=folium.Icon(color=LABEL_COLOR[idx], icon='home')).add_to(m)
     
     return m

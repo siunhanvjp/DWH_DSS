@@ -45,3 +45,14 @@ def prepare_df():
     df_stateonly['average_order_sale'] = df_stateonly['total_sale'] / df_stateonly['product_count']
     
     return df_stateonly
+
+def prepare_df_dim_fact():
+    dbconfig = load_dbconfig()
+
+    get_state_fact = "SELECT * FROM state_province_fact"
+    df_stat = execute_sql(dbconfig, get_state_fact, method=RETRIEVE)
+
+    get_date_dim = "SELECT * FROM date_dim"
+    df_date = execute_sql(dbconfig, get_date_dim, method=RETRIEVE)
+
+    return df_date, df_stat
