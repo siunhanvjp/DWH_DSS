@@ -9,7 +9,7 @@ import streamlit as st
 
 def home():
     
-    st.title('Combined App')
+    st.title('DSS App')
         
     if st.button("Visualization Dashboard"):
         st.switch_page("pages/dashboard.py")
